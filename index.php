@@ -11,7 +11,7 @@ and open the template in the editor.
     </head>
     <body>
         <?php
-echooo 'Grosse erreur
+            echo Grosse erreur';
         ?>
     </body>
 </html>
