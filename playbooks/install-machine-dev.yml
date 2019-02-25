@@ -61,11 +61,6 @@
         owner: root
         group: root
         mode: 0600
-  - name: Restart MYSQL
-    service:
-        name: mysql
-        state: restarted
-        enabled: yes
   - name: Gestion du mot de passe du root
     mysql_user:
         name: root
@@ -85,9 +80,81 @@
         host: localhost
         priv: "{{mysql_db}}.*:ALL,GRANT"
         login_unix_socket: /var/run/mysqld/mysqld.sock
-#    hosts: all
-#    tasks:
-#    - name: Installation de PIP 
-#      yum: 
-#          name: python-pip 
-#          state: latest
+        
+  - name: Restart MYSQL
+    service:
+        name: mysql
+        state: restarted
+        enabled: yes
+        
+- name: PHPMYADMIN Installation
+  hosts: all
+  tasks:
+  - name: Mysql Server
+    apt:
+        name: debconf-utils
+        state: present
+  - name: Installation de dbconfig
+    debconf:
+        name: phpmyadmin
+        question: phpmyadmin/dbconfig-install
+        value: true
+        vtype: boolean
+  - name: Confirmation du mot de passe
+    debconf:
+        name: phpmyadmin
+        question: phpmyadmin/app-password-confirm
+        value: btsinfo
+        vtype: password
+  - name: Mettre le mot de passe administrateur
+    debconf:
+        name: phpmyadmin
+        question: phpmyadmin/mysql/admin-pass
+        value: btsinfo
+        vtype: password
+  - name: Mettre le mot de passe de l'utilisateur PhpMyAdmin
+    debconf:
+        name: phpmyadmin
+        question: phpmyadmin/mysql/app-pass
+        value: btsinfo
+        vtype: password
+  - name: Serveur Web à reconfigurer
+    debconf:
+        name: phpmyadmin
+        question: phpmyadmin/reconfigure-webserver
+        value: apache2
+        vtype: multiselect
+  - name: PhpMyAdmin
+    apt:
+        name: phpmyadmin
+        state: latest
+        
+- name: Gestion des erreurs
+  hosts: all
+  tasks:    
+  - name: Suppression index.html
+    file: 
+        path: /var/www/html/index.html
+        state: absent
+  - name: Copy index.html
+    copy:
+        src: /root/index.php
+        dest: /var/www/html/
+        owner: www-data
+        group: www-data
+        mode: 0755
+  - name: Affichage erreurs
+    lineinfile:
+        dest: /etc/php/7.2/apache2/php.ini
+        regexp: '^display_errors = Off'
+        line: 'display_errors = On'
+  - name: Affichage erreurs
+    lineinfile:
+        dest: /etc/php/7.2/apache2/php.ini
+        regexp: '^display_statup_errors = Off'
+        line: 'display_startup_errors = On'
+  - name:  Relaunch apache
+    service:
+        name: apache2
+        state: restarted
+        enabled: yes
